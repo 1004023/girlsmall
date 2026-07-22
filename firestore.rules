@@ -1,0 +1,102 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // دالة مساعدة: هل المستخدم أدمن؟
+    // ============================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    function isOwnerBrandManager(brandId) {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "brand_manager" &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.brandId == brandId;
+    }
+
+    // ============================================
+    // Users: كل حد يقرا بياناته بس، الأدمن يقدر يقرا للكل
+    // ============================================
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin(); // إنشاء حسابات المديرات بيدها الأدمن بس
+    }
+
+    // ============================================
+    // Brands: أي حد يقرا (عشان الموقع العام يعرض البراندات)
+    // التعديل: الأدمن، أو المديرة بتاعة البراند ده بس
+    // ============================================
+    match /brands/{brandId} {
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin() || isOwnerBrandManager(brandId);
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // Products: أي حد يقرا، الكتابة للأدمن أو صاحبة البراند بس
+    // ============================================
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isAdmin() || isOwnerBrandManager(request.resource.data.brandId);
+      allow update, delete: if isAdmin() || isOwnerBrandManager(resource.data.brandId);
+    }
+
+    // ============================================
+    // JoinRequests: أي حد (حتى مش مسجل) يقدر يبعت طلب
+    // بس القراءة والموافقة للأدمن بس
+    // ============================================
+    match /joinRequests/{requestId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ============================================
+    // Orders: العميلة (مش مسجلة) تقدر تعمل طلب
+    // القراءة: الأدمن يشوف الكل، المديرة تشوف طلبات براندها بس
+    // التحديث (تأكيد الاستلام): الأدمن أو صاحبة البراند بس
+    // ============================================
+    match /orders/{orderId} {
+      allow create: if true;
+      allow read: if isAdmin() || isOwnerBrandManager(resource.data.brandId);
+      allow update: if isAdmin() || isOwnerBrandManager(resource.data.brandId);
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // Reviews: أي حد يقدر يقيّم ويقرا، الأدمن بس يقدر يحذف تقييم مسيء
+    // ============================================
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // Activity Log: أي مستخدمة مسجلة دخول (أدمن أو مديرة) تقدر تسجل عملية
+    // القراءة للأدمن بس
+    // ============================================
+    match /activityLog/{logId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // ============================================
+    // Categories: أي حد يقرا، الأدمن بس يضيف قسم جديد
+    // ============================================
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+  }
+}
