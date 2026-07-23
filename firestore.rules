@@ -26,12 +26,11 @@ service cloud.firestore {
     // ============================================
     match /users/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow write: if isAdmin(); // إنشاء حسابات المديرات بيدها الأدمن بس
+      allow write: if isAdmin();
     }
 
     // ============================================
-    // Brands: أي حد يقرا (عشان الموقع العام يعرض البراندات)
-    // التعديل: الأدمن، أو المديرة بتاعة البراند ده بس
+    // Brands
     // ============================================
     match /brands/{brandId} {
       allow read: if true;
@@ -41,7 +40,7 @@ service cloud.firestore {
     }
 
     // ============================================
-    // Products: أي حد يقرا، الكتابة للأدمن أو صاحبة البراند بس
+    // Products
     // ============================================
     match /products/{productId} {
       allow read: if true;
@@ -50,8 +49,7 @@ service cloud.firestore {
     }
 
     // ============================================
-    // JoinRequests: أي حد (حتى مش مسجل) يقدر يبعت طلب
-    // بس القراءة والموافقة للأدمن بس
+    // JoinRequests
     // ============================================
     match /joinRequests/{requestId} {
       allow create: if true;
@@ -59,9 +57,7 @@ service cloud.firestore {
     }
 
     // ============================================
-    // Orders: العميلة (مش مسجلة) تقدر تعمل طلب
-    // القراءة: الأدمن يشوف الكل، المديرة تشوف طلبات براندها بس
-    // التحديث (تأكيد الاستلام): الأدمن أو صاحبة البراند بس
+    // Orders
     // ============================================
     match /orders/{orderId} {
       allow create: if true;
@@ -71,7 +67,7 @@ service cloud.firestore {
     }
 
     // ============================================
-    // Reviews: أي حد يقدر يقيّم ويقرا، الأدمن بس يقدر يحذف تقييم مسيء
+    // Reviews
     // ============================================
     match /reviews/{reviewId} {
       allow read: if true;
@@ -81,8 +77,7 @@ service cloud.firestore {
     }
 
     // ============================================
-    // Activity Log: أي مستخدمة مسجلة دخول (أدمن أو مديرة) تقدر تسجل عملية
-    // القراءة للأدمن بس
+    // Activity Log
     // ============================================
     match /activityLog/{logId} {
       allow read: if isAdmin();
@@ -91,7 +86,16 @@ service cloud.firestore {
     }
 
     // ============================================
-    // Categories: أي حد يقرا، الأدمن بس يضيف قسم جديد
+    // Site Feedback
+    // ============================================
+    match /siteFeedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // ============================================
+    // Categories
     // ============================================
     match /categories/{categoryId} {
       allow read: if true;
